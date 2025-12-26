@@ -5,10 +5,30 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 # Check if GPU is available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model_name = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
-#model = AutoModelForCausalLM.from_pretrained(model_name)
+#model_name = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
+#model_name = "Qwen/Qwen3-4B-Instruct-2507"
+model_name = "Qwen/Qwen3-1.7B"
 model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+knowledge_base_entries = [
+    {"role": "system", "content": "Nossas horas de serviço são das 9h às 17h, de segunda a sexta."},
+    {"role": "system", "content": "Você pode solicitar um reembolso dentro de 30 dias após a compra."},
+    {"role": "system", "content": "Para se cadastrar, visite nosso site e clique em 'Registrar'."},
+    {"role": "system", "content": "Aceitamos cartões de crédito, débito e PayPal."},
+]
+
+messages = [
+    {"role": "system", "content": """
+    Eu quero que voce atue como uma IA Atendente da empresa GrupoCard chamado Cardoso, o seu proposito é guiar as pessoas no chatbot.
+    A sua linguagem primaria é o Portugues Brasileiro.
+    Eu quero que você responda de forma curta e direta com no maximo 300 caracteres.
+    Eu quero que voce responda apenas o que esta em sua base de conhecimento, caso a pergunta não tenha resposta na base, então fale que não sabe sobre o assunto.
+    """}
+]
+
+for entry in knowledge_base_entries:
+    messages.append(entry)
 
 while True:
     prompt = input("Enter your prompt (or 'quit' to exit): ")
@@ -16,11 +36,7 @@ while True:
     if prompt.lower() == 'quit':
         break
 
-    messages = [
-        {"role": "system", "content": """
-Voce é uma IA Atendente da empresa GrupoCard chamado Cardoso, o seu propositor é guiar as pessoas no chatbot. A sua linguagem primaria é o Portugues Brasileiro."""},
-        {"role": "user", "content": prompt}
-    ]
+    messages.append({"role": "user", "content": prompt})
 
     text = tokenizer.apply_chat_template(
         messages,
@@ -32,11 +48,11 @@ Voce é uma IA Atendente da empresa GrupoCard chamado Cardoso, o seu propositor 
 
     generated_ids = model.generate(
         **model_inputs,
-        #max_new_tokens=64
-        do_sample=True,  # Enable sampling
-        top_k=50,  # Sample from the top 50 tokens
-        min_length=128,  # Minimum length of 128 tokens
-        max_length=256  # Maximum length of 512 tokens
+        do_sample=True,
+        top_k=50,
+        min_length=128,
+        max_length=1024,#256,
+        #max_new_tokens=75
     )
 
     generated_ids = [
@@ -45,10 +61,11 @@ Voce é uma IA Atendente da empresa GrupoCard chamado Cardoso, o seu propositor 
 
     response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
 
-    # Print the generated text character by character
     for char in response:
         print(char, end='', flush=True)
-        time.sleep(0.05)  # Adjust the speed of the typing effect
+        time.sleep(0.05)
 
-    print()  # Print a newline at the end
+    print()
+
+    messages.append({"role": "assistant", "content": response})
 

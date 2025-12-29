@@ -2,7 +2,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import time
 
 class QwenChatbot:
-    def __init__(self, model_name="Qwen/Qwen3-1.7B"):
+    def __init__(self, model_name="Qwen/Qwen3-0.6B"): #Qwen/Qwen3-1.7B
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForCausalLM.from_pretrained(model_name)
         self.history = []
@@ -138,8 +138,11 @@ Approach each interaction as a genuine conversation rather than a task to comple
             enable_thinking=True,
         )
 
+        from transformers import TextStreamer
+        streamer = TextStreamer(self.tokenizer, skip_prompt=True, skip_special_tokens=True)
+
         inputs = self.tokenizer(text, return_tensors="pt")
-        response_ids = self.model.generate(**inputs, max_new_tokens=32768)[0][len(inputs.input_ids[0]):].tolist()
+        response_ids = self.model.generate(**inputs, streamer=streamer, max_new_tokens=32768)[0][len(inputs.input_ids[0]):].tolist()
         response = self.tokenizer.decode(response_ids, skip_special_tokens=True)
 
         self.history.append({"role": "user", "content": user_input})
@@ -157,7 +160,7 @@ if __name__ == "__main__":
 
         response = chatbot.generate_response(prompt)
 
-        for char in response:
-            print(char, end='', flush=True)
-            time.sleep(0.05)
-        print()
+        #for char in response:
+        #    print(char, end='', flush=True)
+        #    time.sleep(0.02)
+        #print()
